@@ -8,6 +8,12 @@ interface ClipboardItem {
   timestamp: number;
 }
 
+type ExecOutputResult = {
+  ok?: boolean;
+  success?: boolean;
+  stdout?: string;
+};
+
 export const ClipboardMenu = memo(function ClipboardMenu() {
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<ClipboardItem[]>([]);
@@ -33,17 +39,19 @@ export const ClipboardMenu = memo(function ClipboardMenu() {
           capture_output: true,
         });
 
-        if (result?.success && result?.stdout) {
+        const typedResult = result as ExecOutputResult | undefined;
+        if ((typedResult?.ok || typedResult?.success) && typedResult?.stdout) {
           const current = await window.compositor?.syscall('exec', {
             command: 'wl-paste',
             args: [],
             capture_output: true,
           });
 
-          if (current?.success && current?.stdout) {
+          const typedCurrent = current as ExecOutputResult | undefined;
+          if ((typedCurrent?.ok || typedCurrent?.success) && typedCurrent?.stdout) {
             const newItem: ClipboardItem = {
               id: Date.now(),
-              content: current.stdout.trim(),
+              content: typedCurrent.stdout.trim(),
               timestamp: Date.now(),
             };
             

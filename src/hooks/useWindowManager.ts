@@ -59,7 +59,7 @@ export function useWindowManager() {
       pendingSurfaceBuffersRef.current.clear();
     };
 
-    const unsubscribePixels = window.compositor?.onSurfaceBuffer((data: SurfaceBufferData) => {
+    const unsubscribePixels = window.compositor.onSurfaceBuffer((data: SurfaceBufferData) => {
       pendingSurfaceBuffersRef.current.set(data.name, data);
       if (surfaceFlushRafRef.current === null) {
         surfaceFlushRafRef.current = requestAnimationFrame(flushSurfaceBuffers);

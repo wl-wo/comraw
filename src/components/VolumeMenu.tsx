@@ -2,6 +2,12 @@ import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import './VolumeMenu.css';
 
+type ExecOutputResult = {
+  ok?: boolean;
+  success?: boolean;
+  stdout?: string;
+};
+
 export const VolumeMenu = memo(function VolumeMenu() {
   const [open, setOpen] = useState(false);
   const [volume, setVolume] = useState(50);
@@ -26,8 +32,9 @@ export const VolumeMenu = memo(function VolumeMenu() {
           capture_output: true,
         });
 
-        if (result?.success && result?.stdout) {
-          const match = result.stdout.match(/(\d+)%/);
+        const typedResult = result as ExecOutputResult | undefined;
+        if ((typedResult?.ok || typedResult?.success) && typedResult?.stdout) {
+          const match = typedResult.stdout.match(/(\d+)%/);
           if (match) {
             setVolume(Number(match[1]));
           }
@@ -45,8 +52,9 @@ export const VolumeMenu = memo(function VolumeMenu() {
           capture_output: true,
         });
 
-        if (result?.success && result?.stdout) {
-          setMuted(result.stdout.trim().includes('yes'));
+        const typedResult = result as ExecOutputResult | undefined;
+        if ((typedResult?.ok || typedResult?.success) && typedResult?.stdout) {
+          setMuted(typedResult.stdout.trim().includes('yes'));
         }
       } catch (err) {
         console.error('Failed to get mute status:', err);

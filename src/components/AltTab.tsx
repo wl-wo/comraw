@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Icon } from '@iconify/react';
-import type { WoWindow } from '@wl-wo/wo-types';
+import type { ApplicationIcon, WoWindow } from '@wl-wo/wo-types';
 import { getIconUrl } from '../utils/iconUtils';
 import './AltTab.css';
 
@@ -92,8 +92,7 @@ export function AltTab({
     // Try to get icon from app_id or name
     const iconName = win.app_id || win.name;
     
-    // Create a simple ApplicationIcon for iconify lookup
-    const iconData: import('wo-types').ApplicationIcon = {
+    const iconData: ApplicationIcon = {
       type: 'iconify',
       data: iconName.toLowerCase().replace(/\s+/g, '-'),
     };

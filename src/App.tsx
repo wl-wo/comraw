@@ -327,7 +327,7 @@ function App() {
 
       // Prevent default browser behavior (scrolling, etc.) for keys we're forwarding
       e.preventDefault();
-      window.compositor?.forwardKeyboard(
+      window.compositor?.forwardKeyboard?.(
         focusedWindow,
         keycode,
         e.type === "keydown",

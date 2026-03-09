@@ -9,6 +9,12 @@ interface WifiNetwork {
   connected: boolean;
 }
 
+type ExecOutputResult = {
+  ok?: boolean;
+  success?: boolean;
+  stdout?: string;
+};
+
 export const WifiMenu = memo(function WifiMenu() {
   const [open, setOpen] = useState(false);
   const [networks, setNetworks] = useState<WifiNetwork[]>([]);
@@ -34,8 +40,9 @@ export const WifiMenu = memo(function WifiMenu() {
         capture_output: true,
       });
       
-      if (result?.success && typeof result?.stdout === 'string') {
-        const records = result.stdout
+      const typedResult = result as ExecOutputResult | undefined;
+      if ((typedResult?.ok || typedResult?.success) && typeof typedResult?.stdout === 'string') {
+        const records = typedResult.stdout
           .split(/\n\s*\n/g)
           .map((block: string) => block.trim())
           .filter(Boolean);
