@@ -371,6 +371,14 @@ function App() {
     };
   }, [focusedWindow]);
 
+  // Environment variable updates from compositor (e.g. DISPLAY after XWayland)
+  useEffect(() => {
+    const unsub = window.compositor?.onEnvUpdate?.((vars) => {
+      console.log("[comraw] env update from compositor:", vars);
+    });
+    return () => unsub?.();
+  }, []);
+
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((n) => n.id !== id));
   }, []);
