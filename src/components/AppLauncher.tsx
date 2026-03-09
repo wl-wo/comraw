@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
-import type { ApplicationInfo } from 'wo-types';
+import type { ApplicationInfo } from '@wl-wo/wo-types';
 import { Icon } from '@iconify/react';
 
 /** Map common freedesktop icon names to iconify IDs */

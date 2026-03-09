@@ -13,7 +13,7 @@ import {
   NotificationToast,
   type NotificationItem,
 } from "./components/NotificationToast";
-import type { NotificationData } from "wo-types";
+import type { NotificationData } from "@wl-wo/wo-types";
 
 let toastIdSeq = 0;
 

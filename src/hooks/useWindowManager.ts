@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import type { SurfaceBufferData, WoWindow } from 'wo-types';
+import type { SurfaceBufferData, WoWindow } from '@wl-wo/wo-types';
 import { updatePixelBuffer } from '../stores/pixelBufferStore';
 
 /**

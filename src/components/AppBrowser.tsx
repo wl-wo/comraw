@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Icon } from "@iconify/react";
-import type { ApplicationInfo } from "wo-types";
+import type { ApplicationInfo } from "@wl-wo/wo-types";
 import { getIconUrl } from "../utils/iconUtils";
 import "./AppBrowser.css";
 

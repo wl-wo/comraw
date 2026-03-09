@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Icon } from '@iconify/react';
-import type { WoWindow } from 'wo-types';
+import type { WoWindow } from '@wl-wo/wo-types';
 import { getIconUrl } from '../utils/iconUtils';
 import './AltTab.css';
 

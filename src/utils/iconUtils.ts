@@ -1,4 +1,4 @@
-import type { ApplicationIcon } from 'wo-types';
+import type { ApplicationIcon } from '@wl-wo/wo-types';
 
 /**
  * Convert an ApplicationIcon to a usable format for rendering

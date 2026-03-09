@@ -3,7 +3,7 @@
  * These are set up by the compositor and available to the UI
  */
 
-import type { WoClient, Compositor, SurfaceBufferData, NotificationData } from './types/wo-types';
+import type { WoClient, Compositor, SurfaceBufferData, NotificationData } from '@wl-wo/wo-types';
 
 declare global {
   interface Window {
