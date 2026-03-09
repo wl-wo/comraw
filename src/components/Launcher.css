@@ -1,0 +1,178 @@
+/* Launcher Dock Styles - Handled in App.css */
+/* Additional component-specific overrides if needed */
+
+.launcher-app-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.launcher-apps {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  overflow: visible;
+  max-width: 100%;
+  padding: 0;
+}
+
+.launcher-apps::-webkit-scrollbar {
+  height: 6px;
+}
+
+.launcher-apps::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.launcher-apps::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.launcher-apps::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.launcher-app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  gap: 4px;
+  color: inherit;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  padding-top: 4px;
+}
+
+.launcher-app:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.12);
+}
+
+.launcher-app:active {
+  background: rgba(255, 255, 255, 0.16);
+  transform: scale(0.98);
+}
+
+.launcher-app-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.launcher-app-icon-iconify {
+  display: block;
+  color: white;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.launcher-app-icon-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.launcher-app-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  max-width: 52px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  transform: translateY(calc(-2 * 48px));
+}
+
+/* App Browser button has separator */
+.launcher-app-browser {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  margin-left: 4px;
+  padding-left: 4px;
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) {
+  .launcher-dock {
+    padding: 6px;
+    gap: 2px;
+  }
+
+  .launcher-app {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+  }
+
+  .launcher-app-icon-container {
+    width: 28px;
+    height: 28px;
+  }
+
+  .launcher-app-label {
+    font-size: 9px;
+  }
+
+  .launcher-app-browser {
+    margin-left: 2px;
+  }
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .launcher-dock {
+    bottom: 12px;
+    padding: 6px;
+    border-radius: 12px;
+    max-width: calc(100vw - 24px);
+  }
+
+  .launcher-apps {
+    gap: 2px;
+  }
+
+  .launcher-app {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    font-size: 9px;
+    gap: 2px;
+    padding-top: 2px;
+  }
+
+  .launcher-app-icon-container {
+    width: 24px;
+    height: 24px;
+  }
+
+  .launcher-app:hover {
+    transform: scale(1.1) translateY(-4px);
+  }
+
+  .launcher-app-browser {
+    margin-left: 2px;
+  }
+}

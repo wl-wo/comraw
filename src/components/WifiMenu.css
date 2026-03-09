@@ -1,0 +1,142 @@
+.wifi-menu {
+  min-width: 280px;
+  max-height: none;
+  overflow: visible;
+}
+
+.wifi-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 8px;
+}
+
+.wifi-menu-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--panel-text);
+}
+
+.wifi-toggle-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: opacity 120ms;
+}
+
+.wifi-toggle-btn:hover {
+  opacity: 0.8;
+}
+
+.wifi-menu-scan {
+  padding: 0 8px 8px;
+}
+
+.wifi-scan-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--panel-text);
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  cursor: pointer;
+  transition: all 120ms;
+  width: 100%;
+  justify-content: center;
+}
+
+.wifi-scan-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.wifi-scan-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@keyframes wifi-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.wifi-scanning {
+  animation: wifi-spin 1s linear infinite;
+}
+
+.wifi-networks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.wifi-network {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.88);
+  text-align: left;
+  transition: background 100ms;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.wifi-network:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.wifi-network:disabled {
+  cursor: default;
+}
+
+.wifi-network-connected {
+  background: rgba(99, 102, 241, 0.15);
+  color: rgba(153, 155, 255, 0.95);
+}
+
+.wifi-network-ssid {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wifi-security-icon {
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+
+.wifi-connected-icon {
+  color: var(--max);
+  flex-shrink: 0;
+}
+
+.wifi-empty,
+.wifi-disabled-msg {
+  padding: 16px;
+  text-align: center;
+  color: var(--panel-text-dim);
+  font-size: 13px;
+}
+
+.wifi-disabled-msg {
+  padding: 24px 16px;
+}

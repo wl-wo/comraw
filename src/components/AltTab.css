@@ -1,0 +1,155 @@
+.alttab-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: alttab-fade-in 0.15s ease-out;
+}
+
+@keyframes alttab-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.alttab-container {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  max-width: 80%;
+  max-height: 80%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.alttab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+  max-height: 60vh;
+  padding: 4px;
+}
+
+.alttab-item {
+  background: white;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 140px;
+}
+
+.alttab-item:hover {
+  background: rgba(0, 122, 255, 0.1);
+  border-color: rgba(0, 122, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.alttab-item.selected {
+  background: rgba(0, 122, 255, 0.15);
+  border-color: #007AFF;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.alttab-item-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.alttab-icon-iconify {
+  color: #333;
+}
+
+.alttab-icon-img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.alttab-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1d1d1f;
+  text-align: center;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+
+.alttab-item-subtitle {
+  font-size: 11px;
+  color: #86868b;
+  text-align: center;
+}
+
+.alttab-hint {
+  font-size: 12px;
+  color: #86868b;
+  text-align: center;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .alttab-container {
+    background: rgba(30, 30, 30, 0.95);
+  }
+
+  .alttab-item {
+    background: rgba(50, 50, 50, 0.8);
+    border-color: transparent;
+  }
+
+  .alttab-item:hover {
+    background: rgba(0, 122, 255, 0.2);
+    border-color: rgba(0, 122, 255, 0.5);
+  }
+
+  .alttab-item.selected {
+    background: rgba(0, 122, 255, 0.25);
+    border-color: #0A84FF;
+    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.4);
+  }
+
+  .alttab-item-title {
+    color: #f5f5f7;
+  }
+
+  .alttab-icon-iconify {
+    color: #f5f5f7;
+  }
+
+  .alttab-hint {
+    color: #86868b;
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+}

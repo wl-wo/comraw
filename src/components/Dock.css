@@ -1,0 +1,239 @@
+/* Dock at the bottom of the screen showing minimized windows */
+
+.dock {
+  position: fixed;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9000;
+  pointer-events: none;
+  animation: dock-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes dock-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.dock-container {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(16, 16, 24, 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+}
+
+.dock-item-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dock-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.dock-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dock-item:active {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.dock-item-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.dock-item-icon svg,
+.dock-item-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dock-item-icon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.dock-item:hover .dock-item-icon::before {
+  opacity: 1;
+}
+
+.dock-item:hover .dock-item-icon {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* macOS-style tooltip */
+.dock-tooltip {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(40, 40, 48, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: rgba(255, 255, 255, 0.95);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: tooltip-appear 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10001;
+}
+
+@keyframes tooltip-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.dock-item-letter {
+  font-size: 24px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.dock-item-label {
+  font-size: 11px;
+  font-weight: 500;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.dock-item:hover .dock-item-label {
+  opacity: 1;
+}
+
+/* Context Menu */
+.dock-context-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 160px;
+  background: rgba(24, 24, 32, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  animation: context-menu-appear 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes context-menu-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dock-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  text-align: left;
+}
+
+.dock-context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.dock-context-menu-item:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dock-context-menu-item iconify-icon {
+  color: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
+}
+
+.dock-context-menu-item:hover iconify-icon {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dock-context-menu-item-danger {
+  color: rgba(255, 100, 100, 0.95);
+}
+
+.dock-context-menu-item-danger:hover {
+  background: rgba(255, 80, 80, 0.15);
+  color: rgb(255, 120, 120);
+}
+
+.dock-context-menu-item-danger iconify-icon {
+  color: rgba(255, 100, 100, 0.8);
+}
+
+.dock-context-menu-item-danger:hover iconify-icon {
+  color: rgb(255, 120, 120);
+}
