@@ -52,9 +52,9 @@ export function useWindowManager() {
     const flushSurfaceBuffers = () => {
       surfaceFlushRafRef.current = null;
       for (const data of pendingSurfaceBuffersRef.current.values()) {
-        const { name, width: pw, height: ph, stride, pixels } = data;
+        const { name, width: pw, height: ph, stride, pixels, damageRects } = data;
         const buffer = pixels instanceof Uint8Array ? pixels : new Uint8Array(pixels);
-        updatePixelBuffer(name, buffer, pw, ph, stride);
+        updatePixelBuffer(name, buffer, pw, ph, stride, damageRects);
       }
       pendingSurfaceBuffersRef.current.clear();
     };

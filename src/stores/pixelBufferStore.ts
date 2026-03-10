@@ -4,12 +4,15 @@
  * updates every frame (~60fps per window).
  */
 
+type DamageRect = { x: number; y: number; width: number; height: number };
+
 type BufferEntry = {
   buffer: Uint8Array;
   width: number;
   height: number;
   stride: number;
   generation: number;
+  damageRects?: DamageRect[];
 };
 
 const store = new Map<string, BufferEntry>();
@@ -22,8 +25,9 @@ export function updatePixelBuffer(
   width: number,
   height: number,
   stride: number,
+  damageRects?: DamageRect[],
 ) {
-  store.set(name, { buffer, width, height, stride, generation: ++generation });
+  store.set(name, { buffer, width, height, stride, generation: ++generation, damageRects });
   listeners.get(name)?.forEach((cb) => cb());
 }
 

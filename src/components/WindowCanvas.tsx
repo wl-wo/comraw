@@ -23,11 +23,14 @@ export const WindowCanvas = memo(function WindowCanvas({ windowName }: WindowCan
       if (!canvas || !entry || entry.generation === lastGen) return;
       lastGen = entry.generation;
 
-      const { buffer, width: pw, height: ph, stride } = entry;
+      const { buffer, width: pw, height: ph, stride, damageRects } = entry;
       if (pw <= 0 || ph <= 0 || stride < pw * 4 || buffer.length < stride * ph) return;
 
-      if (canvas.width !== pw) canvas.width = pw;
-      if (canvas.height !== ph) canvas.height = ph;
+      const sizeChanged = canvas.width !== pw || canvas.height !== ph;
+      if (sizeChanged) {
+        canvas.width = pw;
+        canvas.height = ph;
+      }
 
       let ctx = ctxRef.current;
       if (!ctx) {
@@ -45,54 +48,102 @@ export const WindowCanvas = memo(function WindowCanvas({ windowName }: WindowCan
       }
 
       const dst32 = new Uint32Array(imgData.data.buffer);
-      const bytesPerRow = pw * 4;
       const aligned = (buffer.byteOffset & 0x3) === 0;
+      const bytesPerRow = pw * 4;
       const fastContiguous = stride === bytesPerRow && aligned;
 
-      if (fastContiguous) {
+      // When damage rects are available and canvas size hasn't changed,
+      // only convert and blit the damaged regions.
+      const usePartial = !sizeChanged && damageRects && damageRects.length > 0 && damageRects.length < 64;
+
+      if (usePartial && fastContiguous) {
         const src32 = new Uint32Array(buffer.buffer, buffer.byteOffset, pw * ph);
-        for (let index = 0; index < src32.length; index++) {
-          const pixel = src32[index];
-          dst32[index] =
-            (pixel & 0xff00ff00) |
-            ((pixel & 0x00ff0000) >>> 16) |
-            ((pixel & 0x000000ff) << 16);
+        for (const r of damageRects!) {
+          const rx = Math.max(0, r.x);
+          const ry = Math.max(0, r.y);
+          const rw = Math.min(pw - rx, r.width);
+          const rh = Math.min(ph - ry, r.height);
+          if (rw <= 0 || rh <= 0) continue;
+          for (let y = ry; y < ry + rh; y++) {
+            let idx = y * pw + rx;
+            for (let x = 0; x < rw; x++, idx++) {
+              const pixel = src32[idx];
+              dst32[idx] =
+                (pixel & 0xff00ff00) |
+                ((pixel & 0x00ff0000) >>> 16) |
+                ((pixel & 0x000000ff) << 16);
+            }
+          }
+          ctx.putImageData(imgData, 0, 0, rx, ry, rw, rh);
         }
-      } else if (aligned) {
+      } else if (usePartial && aligned) {
         const src32 = new Uint32Array(buffer.buffer, buffer.byteOffset, (stride * ph) >>> 2);
         const srcStride32 = stride >>> 2;
-        for (let y = 0; y < ph; y++) {
-          let srcIndex = y * srcStride32;
-          let dstIndex = y * pw;
-          for (let x = 0; x < pw; x++, srcIndex++, dstIndex++) {
-            const pixel = src32[srcIndex];
-            dst32[dstIndex] =
+        for (const r of damageRects!) {
+          const rx = Math.max(0, r.x);
+          const ry = Math.max(0, r.y);
+          const rw = Math.min(pw - rx, r.width);
+          const rh = Math.min(ph - ry, r.height);
+          if (rw <= 0 || rh <= 0) continue;
+          for (let y = ry; y < ry + rh; y++) {
+            let srcIndex = y * srcStride32 + rx;
+            let dstIndex = y * pw + rx;
+            for (let x = 0; x < rw; x++, srcIndex++, dstIndex++) {
+              const pixel = src32[srcIndex];
+              dst32[dstIndex] =
+                (pixel & 0xff00ff00) |
+                ((pixel & 0x00ff0000) >>> 16) |
+                ((pixel & 0x000000ff) << 16);
+            }
+          }
+          ctx.putImageData(imgData, 0, 0, rx, ry, rw, rh);
+        }
+      } else {
+        // Full-frame fallback
+        if (fastContiguous) {
+          const src32 = new Uint32Array(buffer.buffer, buffer.byteOffset, pw * ph);
+          for (let index = 0; index < src32.length; index++) {
+            const pixel = src32[index];
+            dst32[index] =
               (pixel & 0xff00ff00) |
               ((pixel & 0x00ff0000) >>> 16) |
               ((pixel & 0x000000ff) << 16);
           }
-        }
-      } else {
-        const src8 = buffer;
-        for (let y = 0; y < ph; y++) {
-          const srcRow = y * stride;
-          let dstIndex = y * pw;
-          for (let x = 0; x < pw; x++, dstIndex++) {
-            const p = srcRow + (x << 2);
-            const b = src8[p];
-            const g = src8[p + 1];
-            const r = src8[p + 2];
-            const a = src8[p + 3];
-            dst32[dstIndex] =
-              (a << 24) |
-              (b << 16) |
-              (g << 8) |
-              r;
+        } else if (aligned) {
+          const src32 = new Uint32Array(buffer.buffer, buffer.byteOffset, (stride * ph) >>> 2);
+          const srcStride32 = stride >>> 2;
+          for (let y = 0; y < ph; y++) {
+            let srcIndex = y * srcStride32;
+            let dstIndex = y * pw;
+            for (let x = 0; x < pw; x++, srcIndex++, dstIndex++) {
+              const pixel = src32[srcIndex];
+              dst32[dstIndex] =
+                (pixel & 0xff00ff00) |
+                ((pixel & 0x00ff0000) >>> 16) |
+                ((pixel & 0x000000ff) << 16);
+            }
+          }
+        } else {
+          const src8 = buffer;
+          for (let y = 0; y < ph; y++) {
+            const srcRow = y * stride;
+            let dstIndex = y * pw;
+            for (let x = 0; x < pw; x++, dstIndex++) {
+              const p = srcRow + (x << 2);
+              const b = src8[p];
+              const g = src8[p + 1];
+              const r = src8[p + 2];
+              const a = src8[p + 3];
+              dst32[dstIndex] =
+                (a << 24) |
+                (b << 16) |
+                (g << 8) |
+                r;
+            }
           }
         }
+        ctx.putImageData(imgData, 0, 0);
       }
-
-      ctx.putImageData(imgData, 0, 0);
     };
 
     const onUpdate = () => {
