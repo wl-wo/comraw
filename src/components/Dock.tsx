@@ -16,6 +16,13 @@ interface ContextMenuState {
   y: number;
 }
 
+// Magnification constants
+const BASE_ICON_SIZE = 48;
+const MAX_SCALE = 1.5;
+const NEIGHBOR_SCALE = 1.25;
+const MAGNIFY_RANGE = 3; // number of neighbors affected on each side
+const ICON_INNER = 32; // inner svg/img size
+
 const APP_ICONS: Record<string, string> = {
   'org.gnome.Terminal': 'mdi:terminal',
   'kitty': 'mdi:application-brackets',
@@ -90,7 +97,28 @@ function getWindowIcon(win: CompositorWindow): string {
 export const Dock = memo(function Dock({ minimizedWindows, onRestore, onKill }: DockProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [hoveredWindow, setHoveredWindow] = useState<string | null>(null);
+  const [mouseX, setMouseX] = useState<number | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  /** Compute per-icon scale based on cursor distance from icon center. */
+  function getIconScale(index: number): number {
+    if (mouseX === null || !containerRef.current) return 1;
+    const el = itemRefs.current.get(minimizedWindows[index]?.name ?? '');
+    if (!el) return 1;
+    const rect = el.getBoundingClientRect();
+    const iconCenterX = rect.left + rect.width / 2;
+    const dist = Math.abs(mouseX - iconCenterX);
+    // Each item is roughly BASE_ICON_SIZE + padding + gap ≈ 68px wide
+    const itemWidth = 68;
+    const normalizedDist = dist / itemWidth;
+    if (normalizedDist > MAGNIFY_RANGE) return 1;
+    // Gaussian-ish falloff: scale = 1 + (MAX_SCALE - 1) * e^(-dist^2 / sigma^2)
+    const sigma = 1.2;
+    const factor = Math.exp(-(normalizedDist * normalizedDist) / (sigma * sigma));
+    return 1 + (MAX_SCALE - 1) * factor;
+  }
 
   useEffect(() => {
     if (minimizedWindows.length > 0) {
@@ -154,33 +182,52 @@ export const Dock = memo(function Dock({ minimizedWindows, onRestore, onKill }: 
 
   return (
     <div className="dock">
-      <div className="dock-container">
-        {minimizedWindows.map((win) => {
+      <div
+        className="dock-container"
+        ref={containerRef}
+        onMouseMove={(e) => setMouseX(e.clientX)}
+        onMouseLeave={() => { setMouseX(null); setHoveredWindow(null); }}
+      >
+        {minimizedWindows.map((win, index) => {
           const iconName = getWindowIcon(win);
           const iconUrl = getIconUrl({ type: 'iconify', data: iconName });
           const isHovered = hoveredWindow === win.name;
+          const scale = getIconScale(index);
+          const iconSize = Math.round(BASE_ICON_SIZE * scale);
+          const innerSize = Math.round(ICON_INNER * scale);
           
           return (
-            <div key={win.name} className="dock-item-wrapper">
+            <div
+              key={win.name}
+              className="dock-item-wrapper"
+              ref={(el) => {
+                if (el) itemRefs.current.set(win.name, el);
+                else itemRefs.current.delete(win.name);
+              }}
+            >
               <button
                 className="dock-item"
                 onClick={() => onRestore(win.name)}
                 onContextMenu={(e) => handleContextMenu(e, win.name)}
                 onMouseEnter={() => setHoveredWindow(win.name)}
-                onMouseLeave={() => setHoveredWindow(null)}
                 aria-label={win.title || win.app_id || win.name}
+                style={{
+                  transform: `scale(${scale})`,
+                  transformOrigin: 'bottom center',
+                  transition: 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
               >
                 {iconUrl.type === 'iconify' ? (
-                  <div className="dock-item-icon">
-                    <Icon icon={iconUrl.value} width="32" height="32" />
+                  <div className="dock-item-icon" style={{ width: BASE_ICON_SIZE, height: BASE_ICON_SIZE }}>
+                    <Icon icon={iconUrl.value} width={ICON_INNER} height={ICON_INNER} />
                   </div>
                 ) : iconUrl.type === 'data-url' || iconUrl.type === 'url' ? (
-                  <div className="dock-item-icon">
-                    <img src={iconUrl.value} alt="" width="32" height="32" />
+                  <div className="dock-item-icon" style={{ width: BASE_ICON_SIZE, height: BASE_ICON_SIZE }}>
+                    <img src={iconUrl.value} alt="" width={ICON_INNER} height={ICON_INNER} />
                   </div>
                 ) : (
-                  <div className="dock-item-icon">
-                    <Icon icon="mdi:application" width="32" height="32" />
+                  <div className="dock-item-icon" style={{ width: BASE_ICON_SIZE, height: BASE_ICON_SIZE }}>
+                    <Icon icon="mdi:application" width={ICON_INNER} height={ICON_INNER} />
                   </div>
                 )}
               </button>

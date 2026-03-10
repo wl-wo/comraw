@@ -59,6 +59,28 @@ export function AppBrowser({
     [onLaunchApplication, onClose]
   );
 
+  /** Spawn a CSS ripple circle at the click point inside the target button. */
+  const handleRippleClick = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>, appName: string) => {
+      const btn = e.currentTarget;
+      const rect = btn.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const size = Math.max(rect.width, rect.height) * 2;
+
+      const ripple = document.createElement('span');
+      ripple.className = 'app-browser-ripple';
+      ripple.style.width = ripple.style.height = `${size}px`;
+      ripple.style.left = `${x - size / 2}px`;
+      ripple.style.top = `${y - size / 2}px`;
+      btn.appendChild(ripple);
+      ripple.addEventListener('animationend', () => ripple.remove());
+
+      handleLaunch(appName);
+    },
+    [handleLaunch]
+  );
+
   const filteredApps = apps.filter((app) =>
     app.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -129,7 +151,7 @@ export function AppBrowser({
                 <button
                   key={app.name}
                   className="app-browser-item"
-                  onClick={() => handleLaunch(app.name)}
+                  onClick={(e) => handleRippleClick(e, app.name)}
                 >
                   <div className="app-browser-item-icon">
                     {renderAppIcon(app)}
