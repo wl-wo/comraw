@@ -4,22 +4,25 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10000;
+  animation: wo-fade-in 100ms ease-out;
 }
 
 .alttab-container {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 10px;
+  background: var(--surface, #1e1e24);
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-lg, 10px);
   padding: 12px;
   max-width: 80%;
   max-height: 80%;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .alttab-grid {
@@ -43,11 +46,11 @@
 }
 
 .alttab-item:hover {
-  background: rgba(0, 122, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .alttab-item.selected {
-  background: rgba(0, 122, 255, 0.15);
+  background: var(--accent-dim, rgba(110, 123, 242, 0.15));
 }
 
 .alttab-item-icon {
@@ -60,7 +63,7 @@
 }
 
 .alttab-icon-iconify {
-  color: #333;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .alttab-icon-img {
@@ -72,7 +75,7 @@
 .alttab-item-title {
   font-size: 13px;
   font-weight: 500;
-  color: #1d1d1f;
+  color: rgba(255, 255, 255, 0.88);
   text-align: center;
   word-break: break-word;
   overflow: hidden;
@@ -85,41 +88,16 @@
 
 .alttab-item-subtitle {
   font-size: 11px;
-  color: #86868b;
+  color: rgba(255, 255, 255, 0.45);
   text-align: center;
 }
 
 .alttab-hint {
   font-size: 12px;
-  color: #86868b;
+  color: rgba(255, 255, 255, 0.45);
   text-align: center;
   padding-top: 6px;
   font-weight: 500;
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .alttab-container {
-    background: rgba(30, 30, 30, 0.95);
-  }
-
-  .alttab-item:hover {
-    background: rgba(0, 122, 255, 0.15);
-  }
-
-  .alttab-item.selected {
-    background: rgba(0, 122, 255, 0.25);
-  }
-
-  .alttab-item-title {
-    color: #f5f5f7;
-  }
-
-  .alttab-icon-iconify {
-    color: #f5f5f7;
-  }
-
-  .alttab-hint {
-    color: #86868b;
-  }
-}
+/* Remove dark mode override — already dark by default */

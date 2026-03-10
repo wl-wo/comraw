@@ -108,8 +108,8 @@
 }
 
 .wifi-network-connected {
-  background: rgba(99, 102, 241, 0.15);
-  color: rgba(153, 155, 255, 0.95);
+  background: var(--accent-dim, rgba(110, 123, 242, 0.15));
+  color: var(--accent, #6e7bf2);
 }
 
 .wifi-network-ssid {

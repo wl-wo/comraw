@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Icon } from "@iconify/react";
 import type { ApplicationInfo } from "@wl-wo/wo-types";
 import { getIconUrl } from "../utils/iconUtils";
@@ -9,6 +9,11 @@ interface AppBrowserProps {
   onClose: () => void;
   onLaunchApplication: (appName: string) => void;
 }
+
+// Gaussian magnification constants (matches Dock style)
+const MAX_SCALE = 1.35;
+const MAGNIFY_RANGE = 2; // grid cells affected on each axis
+const SIGMA = 1.0;
 
 /**
  * Full application browser - shows all installed apps
@@ -21,6 +26,9 @@ export function AppBrowser({
   const [apps, setApps] = useState<ApplicationInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
 
   // Load all applications on first open
   useEffect(() => {
@@ -49,6 +57,33 @@ export function AppBrowser({
 
     loadApps();
   }, [isOpen, apps.length]);
+
+  /** Compute per-icon Gaussian scale based on 2D cursor distance from icon center. */
+  const getIconScale = useCallback(
+    (index: number): number => {
+      if (mousePos === null) return 1;
+      const el = itemRefs.current.get(index);
+      if (!el) return 1;
+      const rect = el.getBoundingClientRect();
+      const iconCenterX = rect.left + rect.width / 2;
+      const iconCenterY = rect.top + rect.height / 2;
+      // Normalise distance by the item's own dimensions (≈ one grid cell)
+      const dx = (mousePos.x - iconCenterX) / rect.width;
+      const dy = (mousePos.y - iconCenterY) / rect.height;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > MAGNIFY_RANGE) return 1;
+      const factor = Math.exp(-(dist * dist) / (SIGMA * SIGMA));
+      return 1 + (MAX_SCALE - 1) * factor;
+    },
+    [mousePos]
+  );
+
+  const handleGridMouseMove = useCallback(
+    (e: React.MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY }),
+    []
+  );
+
+  const handleGridMouseLeave = useCallback(() => setMousePos(null), []);
 
   const handleLaunch = useCallback(
     (appName: string) => {
@@ -146,19 +181,35 @@ export function AppBrowser({
                 : "No applications match your search"}
             </div>
           ) : (
-            <div className="app-browser-grid">
-              {filteredApps.map((app) => (
-                <button
-                  key={app.name}
-                  className="app-browser-item"
-                  onClick={(e) => handleRippleClick(e, app.name)}
-                >
-                  <div className="app-browser-item-icon">
-                    {renderAppIcon(app)}
-                  </div>
-                  <span className="app-browser-item-name">{app.name}</span>
-                </button>
-              ))}
+            <div
+              className="app-browser-grid"
+              ref={gridRef}
+              onMouseMove={handleGridMouseMove}
+              onMouseLeave={handleGridMouseLeave}
+            >
+              {filteredApps.map((app, index) => {
+                const scale = getIconScale(index);
+                return (
+                  <button
+                    key={app.name}
+                    className="app-browser-item"
+                    ref={(el) => {
+                      if (el) itemRefs.current.set(index, el);
+                      else itemRefs.current.delete(index);
+                    }}
+                    onClick={(e) => handleRippleClick(e, app.name)}
+                    style={{
+                      transform: `scale(${scale})`,
+                      zIndex: scale > 1.01 ? 10 : 0,
+                    }}
+                  >
+                    <div className="app-browser-item-icon">
+                      {renderAppIcon(app)}
+                    </div>
+                    <span className="app-browser-item-name">{app.name}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

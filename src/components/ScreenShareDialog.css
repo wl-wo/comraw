@@ -3,9 +3,7 @@
 .screenshare-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -26,10 +24,10 @@
   width: 560px;
   max-width: 90vw;
   max-height: 80vh;
-  background: rgba(28, 28, 36, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.3);
+  background: var(--surface, #1e1e24);
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -59,7 +57,7 @@
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--accent, #6e7bf2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -113,7 +111,7 @@
 
 .screenshare-tab.active {
   color: rgba(255, 255, 255, 0.95);
-  border-bottom-color: #667eea;
+  border-bottom-color: var(--accent, #6e7bf2);
 }
 
 .screenshare-content {
@@ -149,8 +147,8 @@
 }
 
 .screenshare-preview-screen:hover {
-  border-color: rgba(102, 126, 234, 0.5);
-  background: rgba(102, 126, 234, 0.08);
+  border-color: rgba(110, 123, 242, 0.5);
+  background: rgba(110, 123, 242, 0.08);
 }
 
 .screenshare-description {
@@ -185,8 +183,8 @@
 }
 
 .screenshare-window-item.selected {
-  background: rgba(102, 126, 234, 0.15);
-  border-color: rgba(102, 126, 234, 0.4);
+  background: var(--accent-dim, rgba(110, 123, 242, 0.15));
+  border-color: rgba(110, 123, 242, 0.4);
 }
 
 .screenshare-window-icon {
@@ -224,7 +222,7 @@
 }
 
 .screenshare-check {
-  color: #667eea;
+  color: var(--accent, #6e7bf2);
   flex-shrink: 0;
 }
 
@@ -274,13 +272,12 @@
 }
 
 .screenshare-btn-allow {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--accent, #6e7bf2);
   color: white;
 }
 
 .screenshare-btn-allow:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  opacity: 0.9;
 }
 
 .screenshare-btn-allow:disabled {
@@ -289,5 +286,5 @@
 }
 
 .screenshare-btn-allow:active:not(:disabled) {
-  transform: translateY(0);
+  opacity: 0.85;
 }
