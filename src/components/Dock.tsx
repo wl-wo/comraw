@@ -19,7 +19,6 @@ interface ContextMenuState {
 // Magnification constants
 const BASE_ICON_SIZE = 48;
 const MAX_SCALE = 1.5;
-const NEIGHBOR_SCALE = 1.25;
 const MAGNIFY_RANGE = 3; // number of neighbors affected on each side
 const ICON_INNER = 32; // inner svg/img size
 
@@ -193,8 +192,6 @@ export const Dock = memo(function Dock({ minimizedWindows, onRestore, onKill }: 
           const iconUrl = getIconUrl({ type: 'iconify', data: iconName });
           const isHovered = hoveredWindow === win.name;
           const scale = getIconScale(index);
-          const iconSize = Math.round(BASE_ICON_SIZE * scale);
-          const innerSize = Math.round(ICON_INNER * scale);
           
           return (
             <div
