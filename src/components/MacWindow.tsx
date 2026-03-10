@@ -111,8 +111,7 @@ export const MacWindow = memo(function MacWindow({
           dragRaf.current = null;
           const p = pendingDragPos.current;
           if (p && el) {
-            el.style.left = p.x + 'px';
-            el.style.top = p.y + 'px';
+            el.style.transform = `translate3d(${p.x}px, ${p.y}px, 0)`;
           }
         });
       }
@@ -257,7 +256,7 @@ export const MacWindow = memo(function MacWindow({
     <div
       ref={windowRef}
       className={`wo-window${isFocused ? ' focused' : ''}${!hasServerChrome ? ' csd' : ''}${isClosing ? ' closing' : ''}${win.dialog ? ' dialog' : ''}`}
-      style={{ left: pos.x, top: pos.y, width: size.w, height: size.h, zIndex }}
+      style={{ transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`, width: size.w, height: size.h, zIndex }}
       onMouseDown={onFocus}
     >
       {hasServerChrome && (

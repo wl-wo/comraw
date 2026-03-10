@@ -47,100 +47,40 @@ export const WindowCanvas = memo(function WindowCanvas({ windowName }: WindowCan
         imageHRef.current = ph;
       }
 
-      const dst32 = new Uint32Array(imgData.data.buffer);
-      const aligned = (buffer.byteOffset & 0x3) === 0;
+      // Data arrives pre-converted to RGBA from the compositor — direct copy, no per-pixel swap.
+      const dst8 = new Uint8Array(imgData.data.buffer);
       const bytesPerRow = pw * 4;
-      const fastContiguous = stride === bytesPerRow && aligned;
+      const fastContiguous = stride === bytesPerRow;
 
       // When damage rects are available and canvas size hasn't changed,
-      // only convert and blit the damaged regions.
+      // only copy and blit the damaged regions.
       const usePartial = !sizeChanged && damageRects && damageRects.length > 0 && damageRects.length < 64;
 
-      if (usePartial && fastContiguous) {
-        const src32 = new Uint32Array(buffer.buffer, buffer.byteOffset, pw * ph);
+      if (usePartial) {
         for (const r of damageRects!) {
           const rx = Math.max(0, r.x);
           const ry = Math.max(0, r.y);
           const rw = Math.min(pw - rx, r.width);
           const rh = Math.min(ph - ry, r.height);
           if (rw <= 0 || rh <= 0) continue;
+          const rowBytes = rw * 4;
           for (let y = ry; y < ry + rh; y++) {
-            let idx = y * pw + rx;
-            for (let x = 0; x < rw; x++, idx++) {
-              const pixel = src32[idx];
-              dst32[idx] =
-                (pixel & 0xff00ff00) |
-                ((pixel & 0x00ff0000) >>> 16) |
-                ((pixel & 0x000000ff) << 16);
-            }
+            const srcOff = y * stride + rx * 4;
+            const dstOff = y * bytesPerRow + rx * 4;
+            dst8.set(buffer.subarray(srcOff, srcOff + rowBytes), dstOff);
           }
           ctx.putImageData(imgData, 0, 0, rx, ry, rw, rh);
         }
-      } else if (usePartial && aligned) {
-        const src32 = new Uint32Array(buffer.buffer, buffer.byteOffset, (stride * ph) >>> 2);
-        const srcStride32 = stride >>> 2;
-        for (const r of damageRects!) {
-          const rx = Math.max(0, r.x);
-          const ry = Math.max(0, r.y);
-          const rw = Math.min(pw - rx, r.width);
-          const rh = Math.min(ph - ry, r.height);
-          if (rw <= 0 || rh <= 0) continue;
-          for (let y = ry; y < ry + rh; y++) {
-            let srcIndex = y * srcStride32 + rx;
-            let dstIndex = y * pw + rx;
-            for (let x = 0; x < rw; x++, srcIndex++, dstIndex++) {
-              const pixel = src32[srcIndex];
-              dst32[dstIndex] =
-                (pixel & 0xff00ff00) |
-                ((pixel & 0x00ff0000) >>> 16) |
-                ((pixel & 0x000000ff) << 16);
-            }
-          }
-          ctx.putImageData(imgData, 0, 0, rx, ry, rw, rh);
-        }
+      } else if (fastContiguous) {
+        // Optimal path: single bulk copy
+        dst8.set(buffer.subarray(0, bytesPerRow * ph));
+        ctx.putImageData(imgData, 0, 0);
       } else {
-        // Full-frame fallback
-        if (fastContiguous) {
-          const src32 = new Uint32Array(buffer.buffer, buffer.byteOffset, pw * ph);
-          for (let index = 0; index < src32.length; index++) {
-            const pixel = src32[index];
-            dst32[index] =
-              (pixel & 0xff00ff00) |
-              ((pixel & 0x00ff0000) >>> 16) |
-              ((pixel & 0x000000ff) << 16);
-          }
-        } else if (aligned) {
-          const src32 = new Uint32Array(buffer.buffer, buffer.byteOffset, (stride * ph) >>> 2);
-          const srcStride32 = stride >>> 2;
-          for (let y = 0; y < ph; y++) {
-            let srcIndex = y * srcStride32;
-            let dstIndex = y * pw;
-            for (let x = 0; x < pw; x++, srcIndex++, dstIndex++) {
-              const pixel = src32[srcIndex];
-              dst32[dstIndex] =
-                (pixel & 0xff00ff00) |
-                ((pixel & 0x00ff0000) >>> 16) |
-                ((pixel & 0x000000ff) << 16);
-            }
-          }
-        } else {
-          const src8 = buffer;
-          for (let y = 0; y < ph; y++) {
-            const srcRow = y * stride;
-            let dstIndex = y * pw;
-            for (let x = 0; x < pw; x++, dstIndex++) {
-              const p = srcRow + (x << 2);
-              const b = src8[p];
-              const g = src8[p + 1];
-              const r = src8[p + 2];
-              const a = src8[p + 3];
-              dst32[dstIndex] =
-                (a << 24) |
-                (b << 16) |
-                (g << 8) |
-                r;
-            }
-          }
+        // Stride mismatch: copy row by row
+        for (let y = 0; y < ph; y++) {
+          const srcOff = y * stride;
+          const dstOff = y * bytesPerRow;
+          dst8.set(buffer.subarray(srcOff, srcOff + bytesPerRow), dstOff);
         }
         ctx.putImageData(imgData, 0, 0);
       }
