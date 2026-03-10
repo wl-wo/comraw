@@ -8,6 +8,7 @@ import { AppLauncher } from "./components/AppLauncher";
 import { AltTab } from "./components/AltTab";
 import { Dock } from "./components/Dock";
 import { ScreenShareDialog } from "./components/ScreenShareDialog";
+import { CaptureIndicator } from "./components/CaptureIndicator";
 import { NotificationCenter } from "./components/NotificationCenter";
 import {
   NotificationToast,
@@ -187,6 +188,8 @@ function App() {
     requestId: string;
     appName: string;
   } | null>(null);
+  const [screencopyActive, setScreencopyActive] = useState(false);
+  const [screencopyClientCount, setScreencopyClientCount] = useState(0);
   const [trayItems, setTrayItems] = useState<Array<{
     id: string;
     title: string;
@@ -239,6 +242,15 @@ function App() {
     };
 
     const unsub = window.compositor?.onPortalRequest?.(onPortalRequest);
+    return () => unsub?.();
+  }, []);
+
+  // Subscribe to screencopy capture events
+  useEffect(() => {
+    const unsub = window.compositor?.onScreencopyEvent?.((data) => {
+      setScreencopyActive(data.active);
+      setScreencopyClientCount(data.clientCount);
+    });
     return () => unsub?.();
   }, []);
 
@@ -766,6 +778,8 @@ function App() {
         notificationCount={unreadNotifications}
         trayIcons={trayIcons}
       />
+
+      <CaptureIndicator active={screencopyActive} clientCount={screencopyClientCount} />
       
       <div className="wo-desktop">
         {sortedWindows.map((win, idx) => (
