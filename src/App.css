@@ -1,38 +1,51 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   Wo Desktop Shell — clean, Pantheon-inspired, traffic-light decorations
+   Wo Desktop Shell — flat, modern UI with smooth transitions
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ─ Variables ─────────────────────────────────────────────────────────────── */
 :root {
-  /* Traffic lights (macOS exact) */
-  --close: #FF5F57;
-  --min: #FEBC2E;
-  --max: #28C840;
-  --close-h: #FF3B30;
-  --min-h: #FFA500;
-  --max-h: #1AAF29;
+  /* Window controls */
+  --close: #e5484d;
+  --min: #f5a623;
+  --max: #46a758;
+  --close-h: #dc3d43;
+  --min-h: #e09919;
+  --max-h: #3d9a4e;
 
-  /* Window chrome */
-  --chrome-focus: #FFFFFF;
-  --chrome-blur: #F2F2F2;
-  --chrome-border: rgba(0, 0, 0, 0.14);
-  --chrome-shadow-focus: 0 12px 40px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.16);
-  --chrome-shadow-blur: 0 4px 16px rgba(0, 0, 0, 0.16), 0 1px 4px rgba(0, 0, 0, 0.10);
-  --title-text-focus: #1A1A1A;
-  --title-text-blur: #888888;
+  /* Window chrome — flat, opaque */
+  --chrome-focus: #1c1c22;
+  --chrome-blur: #26262c;
+  --chrome-border: rgba(255, 255, 255, 0.08);
+  --chrome-shadow-focus: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --chrome-shadow-blur: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --title-text-focus: rgba(255, 255, 255, 0.92);
+  --title-text-blur: rgba(255, 255, 255, 0.45);
 
   /* Panel */
-  --panel-h: 32px;
-  --panel-bg: rgba(16, 16, 24, 0.88);
-  --panel-border: rgba(255, 255, 255, 0.08);
-  --panel-text: rgba(255, 255, 255, 0.90);
-  --panel-text-dim: rgba(255, 255, 255, 0.55);
+  --panel-h: 34px;
+  --panel-bg: #111116;
+  --panel-border: rgba(255, 255, 255, 0.06);
+  --panel-text: rgba(255, 255, 255, 0.88);
+  --panel-text-dim: rgba(255, 255, 255, 0.50);
+
+  /* Surfaces — flat opaque backgrounds for popups/dropdowns */
+  --surface: #1e1e24;
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --surface-hover: rgba(255, 255, 255, 0.06);
+  --surface-active: rgba(255, 255, 255, 0.10);
+
+  /* Accent */
+  --accent: #6e7bf2;
+  --accent-dim: rgba(110, 123, 242, 0.15);
 
   /* Geometry */
-  --radius-win: 11px;
-  --title-h: 30px;
+  --radius-win: 8px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --title-h: 32px;
 
-  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -76,14 +89,12 @@ button {
   left: 0;
   right: 0;
   height: var(--panel-h);
-  z-index: 0;
+  z-index: 9999;
   display: flex;
   align-items: center;
-  padding: 0 10px;
+  padding: 0 12px;
   background: var(--panel-bg);
-  border-bottom: 0.5px solid var(--panel-border);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--panel-border);
   user-select: none;
 }
 
@@ -208,20 +219,19 @@ button {
 /* Notification Center */
 .notification-center {
   position: absolute;
-  top: calc(var(--panel-h) + 8px);
+  top: calc(var(--panel-h) + 6px);
   right: 10px;
   width: 360px;
   max-height: calc(100vh - var(--panel-h) - 24px);
-  background: rgba(28, 28, 36, 0.94);
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 10010;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: wo-slide-down 150ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .nc-header {
@@ -229,7 +239,7 @@ button {
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--surface-border);
 }
 
 .nc-title {
@@ -266,9 +276,9 @@ button {
 }
 
 .nc-item {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  background: var(--surface-hover);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
   padding: 8px;
 }
 
@@ -349,13 +359,11 @@ button {
   position: absolute;
   top: calc(100% + 6px);
   min-width: 160px;
-  background: rgba(28, 28, 36, 0.96);
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
   padding: 4px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.50);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 10000;
   animation: wo-slide-down 120ms ease-out;
 }
@@ -374,7 +382,7 @@ button {
   height: 0;
   border-left: 12px solid transparent;
   border-right: 12px solid transparent;
-  border-bottom: 12px solid rgba(28, 28, 36, 0.96);
+  border-bottom: 12px solid var(--surface);
 }
 
 .wo-panel-dropdown-item {
@@ -383,7 +391,7 @@ button {
   gap: 8px;
   width: 100%;
   padding: 7px 10px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   color: rgba(255, 255, 255, 0.88);
   text-align: left;
@@ -469,13 +477,13 @@ button {
   right: 0;
   margin-top: 8px;
   min-width: 180px;
-  background: rgba(30, 30, 36, 0.95);
-  border-radius: 10px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
   padding: 6px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(20px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 10000;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--surface-border);
+  animation: wo-slide-down 120ms ease-out;
 }
 
 .system-tray-menu-item {
@@ -527,7 +535,6 @@ button {
   inset: 0;
   top: var(--panel-h);
   z-index: 1;
-  pointer-events: none;
 }
 
 /* ─ Window ────────────────────────────────────────────────────────────────── */
@@ -541,18 +548,18 @@ button {
   box-shadow: var(--chrome-shadow-blur);
   overflow: hidden;
   pointer-events: auto;
-  transition: box-shadow 180ms ease, border-color 180ms ease;
-  animation: wo-win-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: box-shadow 200ms ease, border-color 200ms ease, background 200ms ease;
+  animation: wo-win-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .wo-window.focused {
   background: var(--chrome-focus);
   box-shadow: var(--chrome-shadow-focus);
-  border-color: rgba(0, 0, 0, 0.18);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .wo-window.closing {
-  animation: wo-win-close 250ms cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  animation: wo-win-close 200ms cubic-bezier(0.4, 0, 0.6, 1) forwards;
 }
 
 /* CSD (Client-Side Decorated) windows: no border, shadow, or background */
@@ -563,13 +570,15 @@ button {
   box-shadow: none !important;
 }
 
-/* Dialog windows: enhanced shadow and always on top of parent */
+/* Dialog windows: slight border emphasis */
 .wo-window.dialog {
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.40), 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 .wo-window.dialog.focused {
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.50), 0 6px 16px rgba(0, 0, 0, 0.30);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .wo-window.csd.focused {
@@ -604,7 +613,7 @@ button {
   align-items: center;
   padding: 0 10px;
   cursor: grab;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   user-select: none;
   position: relative;
   background: inherit;
@@ -627,7 +636,7 @@ button {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  transition: filter 100ms, transform 80ms;
+  transition: background 120ms, transform 80ms;
 }
 
 .wo-btn:active {
@@ -726,13 +735,11 @@ button {
   left: 10px;
   width: 280px;
   max-height: 420px;
-  background: rgba(24, 24, 32, 0.96);
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
   padding: 8px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 9100;
   display: flex;
   flex-direction: column;
@@ -750,18 +757,23 @@ button {
   height: 0;
   border-left: 12px solid transparent;
   border-right: 12px solid transparent;
-  border-bottom: 12px solid rgba(24, 24, 32, 0.96);
+  border-bottom: 12px solid var(--surface);
 }
 
 .wo-launcher-search-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 0.5px solid rgba(255, 255, 255, 0.10);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
   padding: 10px 10px;
   height: 34px;
+  transition: border-color 150ms;
+}
+
+.wo-launcher-search-row:focus-within {
+  border-color: var(--accent);
 }
 
 .wo-launcher-search-icon {
@@ -803,7 +815,7 @@ button {
   align-items: center;
   gap: 10px;
   padding: 7px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: rgba(255, 255, 255, 0.88);
   text-align: left;
   transition: background 100ms, transform 80ms;
@@ -863,19 +875,17 @@ button {
 }
 
 .wo-toast {
-  background: rgba(36, 36, 44, 0.96);
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   display: flex;
   align-items: flex-start;
   gap: 10px;
   pointer-events: auto;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   animation: wo-toast-in 180ms ease-out;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 
 .wo-toast-icon {
@@ -986,15 +996,15 @@ button {
 }
 
 .wo-weather-widget {
-  background: var(--panel-bg);
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
   padding: 16px;
   pointer-events: all;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   color: var(--panel-text);
   font-size: 13px;
-  animation: slideInRight 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: slideInRight 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 0;
 }
 
@@ -1073,14 +1083,14 @@ button {
 }
 
 .wo-tasks-widget {
-  background: var(--panel-bg);
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
   pointer-events: all;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   color: var(--panel-text);
   overflow: hidden;
-  animation: slideInRight 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: slideInRight 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 0;
 }
 

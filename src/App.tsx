@@ -169,6 +169,7 @@ function App() {
     windows,
     focusedWindow,
     focusWindow,
+    unfocusAll,
     minimizeWindow,
     closeWindow,
     maximizeWindow,
@@ -269,6 +270,9 @@ function App() {
     [screenShareRequest],
   );
 
+  // True when any shell overlay is active and should own keyboard focus
+  const shellUiActive = launcherOpen || altTabOpen || notificationCenterOpen;
+
   useEffect(() => {
     // Global keyboard handler for Alt+Tab
     const onGlobalKey = (e: KeyboardEvent) => {
@@ -284,8 +288,8 @@ function App() {
 
     document.addEventListener("keydown", onGlobalKey);
 
-    // Window-specific forwarding for focused Wayland/X11 windows
-    if (!focusedWindow) {
+    // Don't forward keys to compositor when shell UI is active
+    if (shellUiActive || !focusedWindow) {
       return () => document.removeEventListener("keydown", onGlobalKey);
     }
     const isNativeClient = windows.some(
@@ -311,33 +315,34 @@ function App() {
         target?.contentEditable === "plaintext-only";
 
       if (isEditable) {
-        // Allow browser to handle input/textarea/select/contentEditable natively
         return;
       }
 
-      const inNativeContent = Boolean(target?.closest?.(".wo-content"));
-      const inUiControl = Boolean(
+      // Don't forward when interacting with any shell UI element
+      const inShellUi = Boolean(
         target?.closest?.(
-          "button, [role='button'], a, .wo-panel, .wo-desktop-widgets, .wo-dock, .wo-launcher, .wo-alt-tab, .wo-toast-stack",
+          ".wo-panel, .wo-panel-dropdown, .wo-launcher, .wo-alt-tab, .wo-dock, .wo-toast-stack, .wo-desktop-widgets, .notification-center, .wo-calendar, .wo-wifi-menu, .wo-volume-menu, .wo-clipboard-menu, [role='dialog'], [role='menu']",
         ),
       );
+      if (inShellUi) return;
 
+      const inNativeContent = Boolean(target?.closest?.(".wo-content"));
+
+      // Only forward keys when the target is inside a native window's content
+      // area or pointer lock is active. Never forward stray keys from the
+      // desktop, UI controls, or other non-window elements.
       if (!inNativeContent && !document.pointerLockElement) {
-        if (inUiControl) {
-          return;
-        }
+        return;
       }
 
       const keycode = resolveEvdevKey(e);
       if (keycode === undefined) {
-        // Log unknown keys for debugging
         if (e.code && !["Unidentified", ""].includes(e.code)) {
           console.debug("Unknown key code:", e.code, "key:", e.key);
         }
         return;
       }
 
-      // Prevent default browser behavior (scrolling, etc.) for keys we're forwarding
       e.preventDefault();
       window.compositor?.forwardKeyboard?.(
         focusedWindow,
@@ -354,7 +359,7 @@ function App() {
       document.removeEventListener("keydown", onKey, true);
       document.removeEventListener("keyup", onKey, true);
     };
-  }, [focusedWindow, windows, altTabOpen]);
+  }, [focusedWindow, windows, altTabOpen, shellUiActive]);
 
   // Pointer Lock & Relative Motion handling
   useEffect(() => {
@@ -686,10 +691,18 @@ function App() {
 
   const zOf = useCallback(
     (name: string, idx: number) => {
-      const baseZ = 100 + idx;
-      if (focusedWindow === name) return 2000;
       const win = windows.find(w => w.name === name);
-      if (win?.dialog) return baseZ + 50;
+      const baseZ = 100 + (win?.z_order ?? idx);
+      if (focusedWindow === name) {
+        // Guarantee focused window is above ALL other windows by using the
+        // maximum z_order across the whole window list, not just this window's.
+        const maxZ = windows.reduce(
+          (mx, w) => Math.max(mx, 100 + (w.z_order ?? 0)),
+          baseZ,
+        );
+        return maxZ + 50;
+      }
+      if (win?.dialog) return baseZ + 5;
       return baseZ;
     },
     [focusedWindow, windows],
@@ -781,7 +794,9 @@ function App() {
 
       <CaptureIndicator active={screencopyActive} clientCount={screencopyClientCount} />
       
-      <div className="wo-desktop">
+      <div className="wo-desktop" onMouseDown={(e) => {
+        if (e.target === e.currentTarget) unfocusAll();
+      }}>
         {sortedWindows.map((win, idx) => (
           <MacWindow
             key={win.name}
@@ -789,6 +804,7 @@ function App() {
             isFocused={focusedWindow === win.name}
             isClosing={closing[win.name] === true}
             zIndex={zOf(win.name, idx)}
+            shellUiActive={shellUiActive}
             onFocus={() => focusWindow(win.name)}
             onClose={() => handleClose(win.name)}
             onMinimize={() => handleMinimize(win.name)}

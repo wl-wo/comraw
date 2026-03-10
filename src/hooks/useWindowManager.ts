@@ -27,17 +27,9 @@ export function useWindowManager() {
 
       const compositorFocused = dedupedWindows.find((w) => w.focused === true)?.name ?? null;
 
-      // Auto-focus newly appeared Wayland windows
-      const newWaylandWin = dedupedWindows.find(
-        (w: WoWindow) => w.source === 'wayland' && !seenWindowsRef.current.has(w.name),
-      );
       for (const w of dedupedWindows) seenWindowsRef.current.add(w.name);
 
-      if (newWaylandWin) {
-        window.compositor?.action('focus', { window: newWaylandWin.name });
-        setFocusedWindow(newWaylandWin.name);
-      }
-
+      // Trust compositor focus state; fall back to keeping current if still present
       if (compositorFocused) {
         setFocusedWindow(compositorFocused);
       } else {
@@ -92,6 +84,10 @@ export function useWindowManager() {
     setFocusedWindow(name);
   }, []);
 
+  const unfocusAll = useCallback(() => {
+    setFocusedWindow(null);
+  }, []);
+
   const minimizeWindow = useCallback((name: string) => {
     window.compositor?.action('minimize', { window: name });
   }, []);
@@ -117,6 +113,7 @@ export function useWindowManager() {
     windows,
     focusedWindow,
     focusWindow,
+    unfocusAll,
     minimizeWindow,
     closeWindow,
     maximizeWindow,

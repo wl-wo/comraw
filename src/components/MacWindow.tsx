@@ -7,6 +7,7 @@ interface MacWindowProps {
   isFocused: boolean;
   isClosing?: boolean;
   zIndex: number;
+  shellUiActive?: boolean;
   onFocus: () => void;
   onClose: () => void;
   onMinimize: () => void;
@@ -56,6 +57,7 @@ export const MacWindow = memo(function MacWindow({
   isFocused,
   isClosing = false,
   zIndex,
+  shellUiActive = false,
   onFocus,
   onClose,
   onMinimize,
@@ -85,11 +87,16 @@ export const MacWindow = memo(function MacWindow({
     if (!resizing.current) setSize({ w: win.width, h: win.height });
   }, [win.width, win.height]);
 
+  const prevFocusedRef = useRef(false);
   useEffect(() => {
-    if (isFocused && contentRef.current) {
+    const wasFocused = prevFocusedRef.current;
+    prevFocusedRef.current = isFocused;
+    // Only grab DOM focus on actual focus transitions (false → true),
+    // not on every re-render where isFocused is already true.
+    if (isFocused && !wasFocused && !shellUiActive && contentRef.current) {
       contentRef.current.focus({ preventScroll: true });
     }
-  }, [isFocused]);
+  }, [isFocused, shellUiActive]);
 
   // ── Drag (DOM-direct + rAF) ─────────────────────────────────────────────
   const onTitleMouseDown = useCallback((e: React.MouseEvent) => {
