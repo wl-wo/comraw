@@ -65,10 +65,17 @@ export const MacWindow = memo(function MacWindow({
 }: MacWindowProps) {
   const hasServerChrome = win.ssd !== false;
   const contentRef = useRef<HTMLDivElement>(null);
+  const windowRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x: win.x, y: win.y });
   const [size, setSize] = useState({ w: win.width, h: win.height });
   const dragging = useRef<{ ox: number; oy: number } | null>(null);
   const resizing = useRef<{ ox: number; oy: number; sw: number; sh: number } | null>(null);
+  const dragRaf = useRef<number | null>(null);
+  const resizeRaf = useRef<number | null>(null);
+  const pointerMotionRaf = useRef<number | null>(null);
+  const pendingDragPos = useRef<{ x: number; y: number } | null>(null);
+  const pendingResizeSize = useRef<{ w: number; h: number } | null>(null);
+  const pendingMotion = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (!dragging.current) setPos({ x: win.x, y: win.y });
@@ -84,40 +91,59 @@ export const MacWindow = memo(function MacWindow({
     }
   }, [isFocused]);
 
-  // ── Drag ──────────────────────────────────────────────────────────────────
+  // ── Drag (DOM-direct + rAF) ─────────────────────────────────────────────
   const onTitleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!hasServerChrome || (e.target as HTMLElement).closest('[data-control]')) return;
     e.preventDefault();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startPosX = pos.x;
-    const startPosY = pos.y;
-    dragging.current = { ox: startX - startPosX, oy: startY - startPosY };
+    const el = windowRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    dragging.current = { ox: e.clientX - rect.left, oy: e.clientY - rect.top };
     onFocus();
 
     const handleDragMove = (ev: MouseEvent) => {
       if (!dragging.current) return;
-      setPos({ x: ev.clientX - dragging.current.ox, y: ev.clientY - dragging.current.oy });
+      const nx = ev.clientX - dragging.current.ox;
+      const ny = ev.clientY - dragging.current.oy;
+      pendingDragPos.current = { x: nx, y: ny };
+      if (dragRaf.current === null) {
+        dragRaf.current = requestAnimationFrame(() => {
+          dragRaf.current = null;
+          const p = pendingDragPos.current;
+          if (p && el) {
+            el.style.left = p.x + 'px';
+            el.style.top = p.y + 'px';
+          }
+        });
+      }
     };
     const handleDragUp = (ev: MouseEvent) => {
       if (!dragging.current) return;
       const nx = ev.clientX - dragging.current.ox;
       const ny = ev.clientY - dragging.current.oy;
       dragging.current = null;
+      pendingDragPos.current = null;
+      if (dragRaf.current !== null) {
+        cancelAnimationFrame(dragRaf.current);
+        dragRaf.current = null;
+      }
+      setPos({ x: nx, y: ny });
       onMove(nx, ny);
       document.removeEventListener('mousemove', handleDragMove);
       document.removeEventListener('mouseup', handleDragUp);
     };
     document.addEventListener('mousemove', handleDragMove);
     document.addEventListener('mouseup', handleDragUp);
-  }, [pos.x, pos.y, hasServerChrome, onFocus, onMove]);
+  }, [hasServerChrome, onFocus, onMove]);
 
-  // ── Resize ────────────────────────────────────────────────────────────────
+  // ── Resize (DOM-direct + rAF) ───────────────────────────────────────────
   const onResizeMouseDown = useCallback((e: React.MouseEvent) => {
     if (!hasServerChrome) return;
     e.preventDefault();
     e.stopPropagation();
-    resizing.current = { ox: e.clientX, oy: e.clientY, sw: size.w, sh: size.h };
+    const el = windowRef.current;
+    if (!el) return;
+    resizing.current = { ox: e.clientX, oy: e.clientY, sw: el.offsetWidth, sh: el.offsetHeight };
     onFocus();
 
     const MIN = 280;
@@ -126,7 +152,17 @@ export const MacWindow = memo(function MacWindow({
       const { ox, oy, sw, sh } = resizing.current;
       const nw = Math.max(MIN, sw + ev.clientX - ox);
       const nh = Math.max(MIN, sh + ev.clientY - oy);
-      setSize({ w: nw, h: nh });
+      pendingResizeSize.current = { w: nw, h: nh };
+      if (resizeRaf.current === null) {
+        resizeRaf.current = requestAnimationFrame(() => {
+          resizeRaf.current = null;
+          const s = pendingResizeSize.current;
+          if (s && el) {
+            el.style.width = s.w + 'px';
+            el.style.height = s.h + 'px';
+          }
+        });
+      }
     };
     const handleResizeUp = (ev: MouseEvent) => {
       if (!resizing.current) return;
@@ -134,15 +170,21 @@ export const MacWindow = memo(function MacWindow({
       const nw = Math.max(MIN, sw + ev.clientX - ox);
       const nh = Math.max(MIN, sh + ev.clientY - oy);
       resizing.current = null;
+      pendingResizeSize.current = null;
+      if (resizeRaf.current !== null) {
+        cancelAnimationFrame(resizeRaf.current);
+        resizeRaf.current = null;
+      }
+      setSize({ w: nw, h: nh });
       onResize(nw, hasServerChrome ? nh - TITLE_H : nh);
       document.removeEventListener('mousemove', handleResizeMove);
       document.removeEventListener('mouseup', handleResizeUp);
     };
     document.addEventListener('mousemove', handleResizeMove);
     document.addEventListener('mouseup', handleResizeUp);
-  }, [size, onFocus, onResize, hasServerChrome]);
+  }, [hasServerChrome, onFocus, onResize]);
 
-  // ── Pointer forwarding to compositor ──────────────────────────────────────
+  // ── Pointer forwarding to compositor (rAF-throttled motion) ─────────────
   const onContentMouse = useCallback((e: React.MouseEvent) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -150,7 +192,16 @@ export const MacWindow = memo(function MacWindow({
 
     switch (e.type) {
       case 'mousemove':
-        window.compositor?.action('pointer_motion' as never, { window: win.name, x, y });
+        pendingMotion.current = { x, y };
+        if (pointerMotionRaf.current === null) {
+          pointerMotionRaf.current = requestAnimationFrame(() => {
+            pointerMotionRaf.current = null;
+            const m = pendingMotion.current;
+            if (m) {
+              window.compositor?.action('pointer_motion' as never, { window: win.name, ...m });
+            }
+          });
+        }
         break;
       case 'mousedown':
         onFocus();
@@ -193,8 +244,18 @@ export const MacWindow = memo(function MacWindow({
 
   const title = win.title || win.app_id || win.name;
 
+  // Cleanup pending rAFs on unmount
+  useEffect(() => {
+    return () => {
+      if (dragRaf.current !== null) cancelAnimationFrame(dragRaf.current);
+      if (resizeRaf.current !== null) cancelAnimationFrame(resizeRaf.current);
+      if (pointerMotionRaf.current !== null) cancelAnimationFrame(pointerMotionRaf.current);
+    };
+  }, []);
+
   return (
     <div
+      ref={windowRef}
       className={`wo-window${isFocused ? ' focused' : ''}${!hasServerChrome ? ' csd' : ''}${isClosing ? ' closing' : ''}${win.dialog ? ' dialog' : ''}`}
       style={{ left: pos.x, top: pos.y, width: size.w, height: size.h, zIndex }}
       onMouseDown={onFocus}
