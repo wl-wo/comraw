@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { SurfaceBufferData, WoWindow } from '@wl-wo/wo-types';
-import { updatePixelBuffer } from '../stores/pixelBufferStore';
+import { updatePixelBuffer, registerSab, signalSabUpdate, removePixelBuffer } from '../stores/pixelBufferStore';
 
 /**
  * Extended window type with compositor metadata.
@@ -27,6 +27,15 @@ export function useWindowManager() {
 
       const compositorFocused = dedupedWindows.find((w) => w.focused === true)?.name ?? null;
 
+      // Clean up pixel buffers for windows that disappeared
+      const newNames = new Set(dedupedWindows.map((w) => w.name));
+      for (const name of seenWindowsRef.current) {
+        if (!newNames.has(name)) {
+          removePixelBuffer(name);
+        }
+      }
+      seenWindowsRef.current = newNames;
+
       for (const w of dedupedWindows) seenWindowsRef.current.add(w.name);
 
       // Trust compositor focus state; fall back to keeping current if still present
@@ -41,6 +50,18 @@ export function useWindowManager() {
       setWindows(dedupedWindows.map((w: WoWindow) => ({ ...w })));
     });
 
+    // ── Zero-copy SAB path ──────────────────────────────────────────
+    // 1. Register SAB when main process creates/resizes one
+    const unsubscribeSab = window.compositor.onSurfaceSab?.((data) => {
+      registerSab(data.name, data.sab, data.width, data.height, data.stride);
+    });
+
+    // 2. On lightweight update signal, notify the store (no pixel copy)
+    const unsubscribeUpdate = window.compositor.onSurfaceUpdate?.((data) => {
+      signalSabUpdate(data.name, data.width, data.height, data.stride, data.damageRects);
+    });
+
+    // ── Legacy fallback path (structured-clone pixels via IPC) ──────
     const flushSurfaceBuffers = () => {
       surfaceFlushRafRef.current = null;
       for (const data of pendingSurfaceBuffersRef.current.values()) {
@@ -60,6 +81,8 @@ export function useWindowManager() {
 
     return () => {
       unsubscribeWindows?.();
+      unsubscribeSab?.();
+      unsubscribeUpdate?.();
       unsubscribePixels?.();
       if (surfaceFlushRafRef.current !== null) {
         cancelAnimationFrame(surfaceFlushRafRef.current);

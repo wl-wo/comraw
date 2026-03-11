@@ -39,6 +39,40 @@ export const WindowCanvas = memo(function WindowCanvas({ windowName }: WindowCan
       }
       if (!ctx) return;
 
+      const bytesPerRow = pw * 4;
+      const fastContiguous = stride === bytesPerRow;
+
+      // When stride matches and buffer is correctly sized, construct
+      // ImageData directly from the buffer's underlying memory —
+      // avoids copying pixels into a separate ImageData backing store.
+      // This is the zero-copy fast path for SAB-backed buffers.
+      if (fastContiguous) {
+        // Create a Uint8ClampedArray view over the same memory
+        const clamped = new Uint8ClampedArray(buffer.buffer, buffer.byteOffset, bytesPerRow * ph);
+
+        if (!sizeChanged && damageRects && damageRects.length > 0 && damageRects.length < 64) {
+          // Partial damage: create one ImageData from the full buffer,
+          // but only putImageData for damaged regions
+          const imgData = new ImageData(clamped as unknown as Uint8ClampedArray<ArrayBuffer>, pw, ph);
+          for (const r of damageRects) {
+            const rx = Math.max(0, r.x);
+            const ry = Math.max(0, r.y);
+            const rw = Math.min(pw - rx, r.width);
+            const rh = Math.min(ph - ry, r.height);
+            if (rw <= 0 || rh <= 0) continue;
+            ctx.putImageData(imgData, 0, 0, rx, ry, rw, rh);
+          }
+        } else {
+          // Full frame blit — zero-copy from SAB
+          const imgData = new ImageData(clamped as unknown as Uint8ClampedArray<ArrayBuffer>, pw, ph);
+          ctx.putImageData(imgData, 0, 0);
+        }
+        // Don't cache imgData since the clamped array is a live view
+        imageDataRef.current = null;
+        return;
+      }
+
+      // Stride mismatch: must copy row-by-row into a contiguous ImageData
       let imgData = imageDataRef.current;
       if (!imgData || imageWRef.current !== pw || imageHRef.current !== ph) {
         imgData = ctx.createImageData(pw, ph);
@@ -47,17 +81,10 @@ export const WindowCanvas = memo(function WindowCanvas({ windowName }: WindowCan
         imageHRef.current = ph;
       }
 
-      // Data arrives pre-converted to RGBA from the compositor — direct copy, no per-pixel swap.
       const dst8 = new Uint8Array(imgData.data.buffer);
-      const bytesPerRow = pw * 4;
-      const fastContiguous = stride === bytesPerRow;
 
-      // When damage rects are available and canvas size hasn't changed,
-      // only copy and blit the damaged regions.
-      const usePartial = !sizeChanged && damageRects && damageRects.length > 0 && damageRects.length < 64;
-
-      if (usePartial) {
-        for (const r of damageRects!) {
+      if (!sizeChanged && damageRects && damageRects.length > 0 && damageRects.length < 64) {
+        for (const r of damageRects) {
           const rx = Math.max(0, r.x);
           const ry = Math.max(0, r.y);
           const rw = Math.min(pw - rx, r.width);
@@ -71,12 +98,7 @@ export const WindowCanvas = memo(function WindowCanvas({ windowName }: WindowCan
           }
           ctx.putImageData(imgData, 0, 0, rx, ry, rw, rh);
         }
-      } else if (fastContiguous) {
-        // Optimal path: single bulk copy
-        dst8.set(buffer.subarray(0, bytesPerRow * ph));
-        ctx.putImageData(imgData, 0, 0);
       } else {
-        // Stride mismatch: copy row by row
         for (let y = 0; y < ph; y++) {
           const srcOff = y * stride;
           const dstOff = y * bytesPerRow;
