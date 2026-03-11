@@ -12,7 +12,7 @@
   "dependencies": {
     "@iconify/react": "^6.0.2",
     "@sakun/system.css": "^0.1.11",
-    "@wl-wo/wo-types": "^0.3.0",
+    "@wl-wo/wo-types": "^1.0.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "zustand": "^5.0.11"

@@ -35,6 +35,17 @@ export function registerSab(
 ) {
   const view = new Uint8Array(sab);
   sabStore.set(name, { sab, view, width, height, stride });
+
+  // Seed the store immediately so canvases can render even if an update
+  // notification is delayed. The next surface-update will bump generation.
+  store.set(name, {
+    buffer: view,
+    width,
+    height,
+    stride,
+    generation: ++generation,
+  });
+  listeners.get(name)?.forEach((cb) => cb());
 }
 
 /**

@@ -14,7 +14,7 @@ import {
   NotificationToast,
   type NotificationItem,
 } from "./components/NotificationToast";
-import type { NotificationData } from "@wl-wo/wo-types";
+import type { NotificationData, PortalRequestEvent } from "@wl-wo/wo-types";
 
 let toastIdSeq = 0;
 
@@ -23,6 +23,47 @@ type DBusMenuItem = {
   label: string;
   enabled?: boolean;
   children?: DBusMenuItem[];
+};
+
+type TrayItem = {
+  id: string;
+  title: string;
+  status?: "active" | "passive" | "attention";
+  icon?: string;
+  iconDataUrl?: string;
+  service: string;
+  objectPath: string;
+  hasMenu?: boolean;
+  menuPath?: string;
+};
+
+const parseQuotedStrings = (output: string): string[] => {
+  const matches = output.matchAll(/"((?:[^"\\]|\\.)*)"/g);
+  const values: string[] = [];
+  for (const match of matches) {
+    const raw = match[1];
+    values.push(raw.replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+  }
+  return values;
+};
+
+const parseServiceAndPath = (itemRef: string): { service: string; objectPath: string } | null => {
+  const slashIdx = itemRef.indexOf("/");
+  if (slashIdx > 0) {
+    return {
+      service: itemRef.slice(0, slashIdx),
+      objectPath: itemRef.slice(slashIdx),
+    };
+  }
+  if (!itemRef) return null;
+  return { service: itemRef, objectPath: "/StatusNotifierItem" };
+};
+
+const parseBusctlStringValue = (output: string): string => {
+  const quoted = parseQuotedStrings(output);
+  if (quoted.length > 0) return quoted[0];
+  const parts = output.split(/\s+/);
+  return parts.length >= 2 ? parts.slice(1).join(" ").trim() : "";
 };
 
 /** Map browser KeyboardEvent.code to Linux evdev keycode */
@@ -191,17 +232,7 @@ function App() {
   } | null>(null);
   const [screencopyActive, setScreencopyActive] = useState(false);
   const [screencopyClientCount, setScreencopyClientCount] = useState(0);
-  const [trayItems, setTrayItems] = useState<Array<{
-    id: string;
-    title: string;
-    status?: "active" | "passive" | "attention";
-    icon?: string;
-    iconDataUrl?: string;
-    service: string;
-    objectPath: string;
-    hasMenu?: boolean;
-    menuPath?: string;
-  }>>([]);
+  const [trayItems, setTrayItems] = useState<TrayItem[]>([]);
   const [trayMenus, setTrayMenus] = useState<Record<string, DBusMenuItem[]>>({});
 
   // Subscribe to compositor notifications
@@ -227,18 +258,22 @@ function App() {
   }, [notificationCenterOpen]);
 
   useEffect(() => {
-    const onPortalRequest = (data: {
-      requestId: string;
-      kind: string;
-      appName?: string;
-      sessionId?: string;
-    }) => {
-      if (data.kind !== 'screen_share') {
+    const onPortalRequest = (data: PortalRequestEvent) => {
+      const payload = (data as unknown as { payload?: any })?.payload ?? {};
+      const type =
+        typeof payload?.type === "string"
+          ? payload.type
+          : typeof data.kind === "string"
+            ? data.kind
+            : undefined;
+      if (type !== "screen_share_request") {
         return;
       }
       setScreenShareRequest({
         requestId: data.requestId,
-        appName: data.appName || 'Application',
+        appName: String(
+          payload.appName || payload.app_id || (data as any).appName || "Application",
+        ),
       });
     };
 
@@ -260,9 +295,11 @@ function App() {
       if (screenShareRequest) {
         await window.compositor?.syscall("portal_respond", {
           requestId: screenShareRequest.requestId,
-          allowed,
-          type: type || 'screen',
-          windowName: windowName || null,
+          response: {
+            allowed,
+            sourceType: type === "window" ? "Window" : "Monitor",
+            windowName: windowName || null,
+          },
         });
         setScreenShareRequest(null);
       }
@@ -435,6 +472,171 @@ function App() {
     setToasts((prev) => [item, ...prev].slice(0, 4));
   }, []);
 
+  const activateTrayItem = useCallback(async (item: TrayItem) => {
+    try {
+      await window.compositor?.syscall("dbus_call", {
+        service: item.service,
+        objectPath: item.objectPath,
+        interface: "org.kde.StatusNotifierItem",
+        method: "Activate",
+        signature: "ii",
+        args: [0, 0],
+        bus: "user",
+      });
+    } catch (error) {
+      showToast(
+        "Tray activation failed",
+        error instanceof Error ? error.message : String(error),
+        "mdi:alert-circle-outline",
+        4000,
+      );
+    }
+  }, [showToast]);
+
+  const openTrayContextMenu = useCallback(async (item: TrayItem) => {
+    try {
+      await window.compositor?.syscall("dbus_call", {
+        service: item.service,
+        objectPath: item.objectPath,
+        interface: "org.kde.StatusNotifierItem",
+        method: "ContextMenu",
+        signature: "ii",
+        args: [0, 0],
+        bus: "user",
+      });
+    } catch (error) {
+      showToast(
+        "Tray menu failed",
+        error instanceof Error ? error.message : String(error),
+        "mdi:alert-circle-outline",
+        4000,
+      );
+    }
+  }, [showToast]);
+
+  const refreshTray = useCallback(async () => {
+    try {
+      const registered = await window.compositor?.syscall("dbus_get_property", {
+        service: "org.kde.StatusNotifierWatcher",
+        objectPath: "/StatusNotifierWatcher",
+        interface: "org.kde.StatusNotifierWatcher",
+        property: "RegisteredStatusNotifierItems",
+        bus: "user",
+      });
+      if (!registered?.ok || !registered.stdout) {
+        setTrayItems([]);
+        setTrayMenus({});
+        return;
+      }
+      const itemRefs = parseQuotedStrings(registered.stdout);
+      const items: TrayItem[] = [];
+      const menus: Record<string, DBusMenuItem[]> = {};
+
+      for (const ref of itemRefs) {
+        const svc = parseServiceAndPath(ref);
+        if (!svc) continue;
+        const base: TrayItem = {
+          id: ref,
+          title: ref,
+          service: svc.service,
+          objectPath: svc.objectPath,
+        };
+
+        const [idProp, titleProp, iconProp, attentionIconProp, statusProp, menuProp] =
+          await Promise.all([
+            window.compositor?.syscall("dbus_get_property", {
+              service: svc.service,
+              objectPath: svc.objectPath,
+              interface: "org.kde.StatusNotifierItem",
+              property: "Id",
+              bus: "user",
+            }),
+            window.compositor?.syscall("dbus_get_property", {
+              service: svc.service,
+              objectPath: svc.objectPath,
+              interface: "org.kde.StatusNotifierItem",
+              property: "Title",
+              bus: "user",
+            }),
+            window.compositor?.syscall("dbus_get_property", {
+              service: svc.service,
+              objectPath: svc.objectPath,
+              interface: "org.kde.StatusNotifierItem",
+              property: "IconName",
+              bus: "user",
+            }),
+            window.compositor?.syscall("dbus_get_property", {
+              service: svc.service,
+              objectPath: svc.objectPath,
+              interface: "org.kde.StatusNotifierItem",
+              property: "AttentionIconName",
+              bus: "user",
+            }),
+            window.compositor?.syscall("dbus_get_property", {
+              service: svc.service,
+              objectPath: svc.objectPath,
+              interface: "org.kde.StatusNotifierItem",
+              property: "Status",
+              bus: "user",
+            }),
+            window.compositor?.syscall("dbus_get_property", {
+              service: svc.service,
+              objectPath: svc.objectPath,
+              interface: "org.kde.StatusNotifierItem",
+              property: "Menu",
+              bus: "user",
+            }),
+          ]);
+
+        const id = idProp?.stdout ? parseBusctlStringValue(idProp.stdout) : base.id;
+        const title = titleProp?.stdout ? parseBusctlStringValue(titleProp.stdout) : id;
+        const iconName = iconProp?.stdout ? parseBusctlStringValue(iconProp.stdout) : undefined;
+        const attIcon = attentionIconProp?.stdout ? parseBusctlStringValue(attentionIconProp.stdout) : undefined;
+        const status = statusProp?.stdout ? parseBusctlStringValue(statusProp.stdout).toLowerCase() as TrayItem["status"] : undefined;
+        const menuPath = menuProp?.stdout ? parseBusctlStringValue(menuProp.stdout) : undefined;
+
+        const icon = attIcon || iconName;
+
+        items.push({
+          ...base,
+          id,
+          title: title || id,
+          icon,
+          status,
+          menuPath,
+          hasMenu: Boolean(menuPath && menuPath !== "/"),
+        });
+        if (menuPath && menuPath !== "/") {
+          menus[id] = menus[id] || [];
+        }
+      }
+
+      setTrayItems(items);
+      setTrayMenus(menus);
+    } catch (error) {
+      showToast(
+        "Tray refresh failed",
+        error instanceof Error ? error.message : String(error),
+        "mdi:alert-circle-outline",
+        4000,
+      );
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled) return;
+      await refreshTray();
+    };
+    void tick();
+    const id = setInterval(tick, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [refreshTray]);
+
   const handlePowerAction = useCallback(
     async (action: 'lock' | 'sleep' | 'restart' | 'shutdown' | 'logout') => {
       const confirmMessage: Partial<Record<typeof action, string>> = {
@@ -468,172 +670,30 @@ function App() {
     [showToast],
   );
 
+  const trayIcons: TrayIcon[] = useMemo(
+    () =>
+      trayItems.map((item) => ({
+        id: item.id,
+        icon: item.iconDataUrl || (item.icon && item.icon.includes(':') ? item.icon : 'mdi:tray'),
+        title: item.title || item.id,
+        status: item.status,
+        onClick: () => activateTrayItem(item),
+        onContextMenu: () => openTrayContextMenu(item),
+        menu: trayMenus[item.id]?.map((child) => ({
+          id: child.id,
+          label: child.label,
+          enabled: child.enabled !== false,
+          onClick: () => openTrayContextMenu(item),
+        })),
+      })),
+    [trayItems, trayMenus, activateTrayItem, openTrayContextMenu],
+  );
+
   const focusedAppName = useMemo(() => {
     if (!focusedWindow) return undefined;
     const w = windows.find((win) => win.name === focusedWindow);
     return w?.title || w?.app_id || w?.name;
   }, [focusedWindow, windows]);
-
-  useEffect(() => {
-    let alive = true;
-
-    const loadTrayItems = async () => {
-      try {
-        const result = await window.compositor?.syscall("tray_list", {});
-        if (!alive || !Array.isArray(result)) {
-          return;
-        }
-        const next = result
-          .filter((item): item is {
-            id: string;
-            title: string;
-            status?: "active" | "passive" | "attention";
-            icon?: string;
-            iconDataUrl?: string;
-            service: string;
-            objectPath: string;
-            hasMenu?: boolean;
-            menuPath?: string;
-          } => Boolean(item && typeof item.id === "string" && typeof item.service === "string" && typeof item.objectPath === "string"))
-          .map((item) => ({
-            id: item.id,
-            title: item.title || item.id,
-            status: item.status,
-            icon: item.icon || "mdi:circle-medium",
-            iconDataUrl: typeof item.iconDataUrl === "string" ? item.iconDataUrl : undefined,
-            service: item.service,
-            objectPath: item.objectPath,
-            hasMenu: Boolean(item.hasMenu),
-            menuPath: item.menuPath || "/com/canonical/dbusmenu",
-          }));
-        setTrayItems(next);
-      } catch {
-        if (alive) {
-          setTrayItems([]);
-        }
-      }
-    };
-
-    loadTrayItems();
-    const id = window.setInterval(loadTrayItems, 3000);
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-    };
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-
-    const loadMenuItems = async () => {
-      const nextMenus: Record<string, DBusMenuItem[]> = {};
-      for (const item of trayItems) {
-        if (item.hasMenu && item.service && item.menuPath && alive) {
-          try {
-            const items = await window.compositor?.syscall("tray_menu_items", {
-              service: item.service,
-              menuPath: item.menuPath,
-            });
-            if (Array.isArray(items) && items.length > 0) {
-              nextMenus[item.id] = items as DBusMenuItem[];
-            }
-          } catch {
-            // silently skip items with menu fetch errors
-          }
-        }
-      }
-      if (alive) {
-        setTrayMenus(nextMenus);
-      }
-    };
-
-    loadMenuItems();
-    return () => {
-      alive = false;
-    };
-  }, [trayItems]);
-
-  const trayIcons = useMemo<TrayIcon[]>(
-    () =>
-      trayItems.map((item) => {
-        // Build menu from DBusMenu items if available, otherwise use standard actions
-        const menuItems = trayMenus[item.id];
-        const menu = menuItems && menuItems.length > 0
-          ? menuItems.map((mi: DBusMenuItem) => ({
-              id: `${item.id}:${mi.id}`,
-              label: mi.label || mi.id,
-              icon: "mdi:menu",
-              enabled: mi.enabled !== false,
-              onClick: () => {
-                void window.compositor?.syscall("tray_menu_event", {
-                  service: item.service,
-                  menuPath: item.menuPath,
-                  menuId: mi.id,
-                });
-              },
-            }))
-          : [
-              {
-                id: `${item.id}:activate`,
-                label: "Activate",
-                icon: "mdi:gesture-tap",
-                onClick: () => {
-                  void window.compositor?.syscall("tray_activate", {
-                    service: item.service,
-                    objectPath: item.objectPath,
-                  });
-                },
-              },
-              {
-                id: `${item.id}:secondary`,
-                label: "Secondary Action",
-                icon: "mdi:gesture-double-tap",
-                onClick: () => {
-                  void window.compositor?.syscall("tray_secondary_activate", {
-                    service: item.service,
-                    objectPath: item.objectPath,
-                  });
-                },
-              },
-              {
-                id: `${item.id}:menu`,
-                label: "Open Native Menu",
-                icon: "mdi:dots-horizontal",
-                enabled: item.hasMenu,
-                onClick: () => {
-                  void window.compositor?.syscall("tray_context_menu", {
-                    service: item.service,
-                    objectPath: item.objectPath,
-                    x: 0,
-                    y: 0,
-                  });
-                },
-              },
-            ];
-        return {
-          id: item.id,
-          title: item.title,
-          icon: item.iconDataUrl || item.icon || "mdi:circle-medium",
-          status: item.status,
-          onClick: () => {
-            void window.compositor?.syscall("tray_activate", {
-              service: item.service,
-              objectPath: item.objectPath,
-            });
-          },
-          onContextMenu: () => {
-            void window.compositor?.syscall("tray_context_menu", {
-              service: item.service,
-              objectPath: item.objectPath,
-              x: 0,
-              y: 0,
-            });
-          },
-          menu,
-        };
-      }),
-    [trayItems, trayMenus],
-  );
 
   useEffect(() => {
     setMinimized((prev) => {
@@ -650,7 +710,15 @@ function App() {
     () => {
       const filtered = windows
         .filter(
-          (w) => w.name !== "main" && w.mapped !== false && !minimized[w.name],
+          (w) => {
+            if (w.name === "main" || w.mapped === false) return false;
+            const isMinimized = minimized[w.name];
+            const parentMinimized =
+              w.dialog && w.parent_name ? minimized[w.parent_name] === true : false;
+            const parentMissing =
+              w.dialog && w.parent_name && !windows.some((p) => p.name === w.parent_name);
+            return !isMinimized && !parentMinimized && !parentMissing;
+          },
         );
       
       const parentMap = new Map<string, typeof filtered>();

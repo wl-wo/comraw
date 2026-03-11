@@ -7,7 +7,7 @@
       "dependencies": {
         "@iconify/react": "^6.0.2",
         "@sakun/system.css": "^0.1.11",
-        "@wl-wo/wo-types": "^0.3.0",
+        "@wl-wo/wo-types": "^1.0.1",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "zustand": "^5.0.11",
@@ -213,7 +213,7 @@
 
     "@vitejs/plugin-react-swc": ["@vitejs/plugin-react-swc@4.2.3", "", { "dependencies": { "@rolldown/pluginutils": "1.0.0-rc.2", "@swc/core": "^1.15.11" }, "peerDependencies": { "vite": "^4 || ^5 || ^6 || ^7" } }, "sha512-QIluDil2prhY1gdA3GGwxZzTAmLdi8cQ2CcuMW4PB/Wu4e/1pzqrwhYWVd09LInCRlDUidQjd0B70QWbjWtLxA=="],
 
-    "@wl-wo/wo-types": ["@wl-wo/wo-types@0.3.0", "", { "peerDependencies": { "typescript": "^5.9.3" } }, "sha512-taDK2+qTgDM6yzltcc9C5moBg6JnBVIMy2irjc/4xF6sf5Q+tJRkRGKZ0i/w7QhunuKzVa9l+oPeJ9Qn7qwGKQ=="],
+    "@wl-wo/wo-types": ["@wl-wo/wo-types@1.0.1", "", { "peerDependencies": { "typescript": "^5.9.3" } }, "sha512-D25iOCSUIDCFBHrm7HcwuuwAjoaPbaeVww7ZC1Ew2fYQhV8wArRq8kscYlLtMIY4LnuYyC9duB9qw+kHfsKdiw=="],
 
     "acorn": ["acorn@8.16.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw=="],
 
